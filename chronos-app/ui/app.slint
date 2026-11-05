@@ -1,0 +1,230 @@
+import { Button, VerticalBox, HorizontalBox, TabWidget, Slider, CheckBox, ComboBox } from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+    title: "Chronos - Display, Lock Screen & Wallpaper Customizer";
+    preferred-width: 480px;
+    preferred-height: 800px;
+    background: #0d0f12;
+
+    in-out property <bool> aod_enabled: true;
+    in-out property <int> aod_refresh_rate: 1;
+    in-out property <int> clock_style_index: 0;
+    in-out property <bool> suppress_oem_aod: true;
+    in-out property <float> burn_in_shift_px: 3.0;
+    in-out property <float> widget_glow: 0.35;
+    in-out property <bool> aod_timeout_enabled: false;
+    in-out property <int> aod_timeout_seconds: 10;
+
+    in-out property <bool> lockscreen_enabled: true;
+    in-out property <bool> sync_with_aod: true;
+    in-out property <int> biometric_anim_index: 0;
+    in-out property <float> udfps_y_percent: 0.82;
+    in-out property <bool> face_retry_enabled: true;
+
+    in-out property <int> wallpaper_mode_index: 0;
+    in-out property <bool> depth_effect_enabled: true;
+    in-out property <float> depth_threshold: 0.55;
+    in-out property <float> gyro_reactivity: 1.0;
+    in-out property <float> home_blur_radius: 24.0;
+
+    in-out property <string> daemon_status_text: "customd: Connected (KernelSU / Root)";
+    in-out property <string> zygisk_status_text: "SystemUI Zygisk Hook: Active";
+
+    callback apply_configuration();
+    callback test_biometric_feedback();
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 12px;
+
+        // Header Title
+        Text {
+            text: "CHRONOS SUITE";
+            font-size: 22px;
+            font-weight: 800;
+            color: #00e5ff;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: root.daemon_status_text;
+            font-size: 12px;
+            color: #00e676;
+            horizontal-alignment: center;
+        }
+
+        TabWidget {
+            Tab {
+                title: "Display (AOD)";
+                VerticalBox {
+                    spacing: 10px;
+                    CheckBox {
+                        text: "Enable Display Preview (Ambient AOD)";
+                        checked: root.aod_enabled;
+                        toggled => { root.aod_enabled = self.checked; }
+                    }
+                    CheckBox {
+                        text: "Auto-Suppress OEM Stock AOD (Samsung/Xiaomi/Pixel/OnePlus)";
+                        checked: root.suppress_oem_aod;
+                        toggled => { root.suppress_oem_aod = self.checked; }
+                    }
+                    CheckBox {
+                        text: "Screen Off Timeout for AOD Preview";
+                        checked: root.aod_timeout_enabled;
+                        toggled => { root.aod_timeout_enabled = self.checked; }
+                    }
+                    if root.aod_timeout_enabled : Text {
+                        text: "AOD Timeout: " + root.aod_timeout_seconds + " seconds";
+                        color: #b0bec5;
+                    }
+                    if root.aod_timeout_enabled : Slider {
+                        minimum: 3;
+                        maximum: 60;
+                        value: root.aod_timeout_seconds;
+                        changed(val) => { root.aod_timeout_seconds = Math.round(val); }
+                    }
+                    Text {
+                        text: "LTPO Panel Refresh Rate: " + root.aod_refresh_rate + " Hz (Ultra-low power)";
+                        color: #b0bec5;
+                    }
+                    Slider {
+                        minimum: 1;
+                        maximum: 60;
+                        value: root.aod_refresh_rate;
+                        changed(val) => { root.aod_refresh_rate = Math.round(val); }
+                    }
+                    Text {
+                        text: "Widget Glow Intensity: " + Math.round(root.widget_glow * 100) + "%";
+                        color: #b0bec5;
+                    }
+                    Slider {
+                        minimum: 0.0;
+                        maximum: 1.0;
+                        value: root.widget_glow;
+                        changed(val) => { root.widget_glow = val; }
+                    }
+                    Text {
+                        text: "Anti-Burn-In Pixel Shift: ±" + Math.round(root.burn_in_shift_px) + " px (Every 3 mins)";
+                        color: #b0bec5;
+                    }
+                    Slider {
+                        minimum: 1;
+                        maximum: 8;
+                        value: root.burn_in_shift_px;
+                        changed(val) => { root.burn_in_shift_px = val; }
+                    }
+                }
+            }
+
+            Tab {
+                title: "Lock Screen";
+                VerticalBox {
+                    spacing: 10px;
+                    CheckBox {
+                        text: "Enable Custom Lock Screen";
+                        checked: root.lockscreen_enabled;
+                        toggled => { root.lockscreen_enabled = self.checked; }
+                    }
+                    CheckBox {
+                        text: "Sync typography, layout & glow with AOD";
+                        checked: root.sync_with_aod;
+                        toggled => { root.sync_with_aod = self.checked; }
+                    }
+                    Text {
+                        text: "In-Display Fingerprint (UDFPS) Vertical Pos: " + Math.round(root.udfps_y_percent * 100) + "%";
+                        color: #b0bec5;
+                    }
+                    Slider {
+                        minimum: 0.5;
+                        maximum: 0.95;
+                        value: root.udfps_y_percent;
+                        changed(val) => { root.udfps_y_percent = val; }
+                    }
+                    CheckBox {
+                        text: "Show Floating Face Unlock Retry Button";
+                        checked: root.face_retry_enabled;
+                        toggled => { root.face_retry_enabled = self.checked; }
+                    }
+                    Button {
+                        text: "Test Biometric Glow Animation";
+                        clicked => { root.test_biometric_feedback(); }
+                    }
+                }
+            }
+
+            Tab {
+                title: "Wallpaper & Canvas";
+                VerticalBox {
+                    spacing: 10px;
+                    Text {
+                        text: "Multi-Layer Engine: Base Image/Video + Shaders + Parallax";
+                        color: #b0bec5;
+                    }
+                    CheckBox {
+                        text: "AI Neural Depth Effect (Clock behind subject)";
+                        checked: root.depth_effect_enabled;
+                        toggled => { root.depth_effect_enabled = self.checked; }
+                    }
+                    Text {
+                        text: "Subject Depth Occlusion Cutoff: " + Math.round(root.depth_threshold * 100) + "%";
+                        color: #b0bec5;
+                    }
+                    Slider {
+                        minimum: 0.1;
+                        maximum: 0.9;
+                        value: root.depth_threshold;
+                        changed(val) => { root.depth_threshold = val; }
+                    }
+                    Text {
+                        text: "3D Gyroscope Dynamic Movement Reactivity: " + Math.round(root.gyro_reactivity * 100) + "%";
+                        color: #b0bec5;
+                    }
+                    Slider {
+                        minimum: 0.0;
+                        maximum: 2.0;
+                        value: root.gyro_reactivity;
+                        changed(val) => { root.gyro_reactivity = val; }
+                    }
+                    Text {
+                        text: "Launcher Progressive Gaussian Blur: " + Math.round(root.home_blur_radius) + " px";
+                        color: #b0bec5;
+                    }
+                    Slider {
+                        minimum: 0.0;
+                        maximum: 50.0;
+                        value: root.home_blur_radius;
+                        changed(val) => { root.home_blur_radius = val; }
+                    }
+                }
+            }
+
+            Tab {
+                title: "System & Safety";
+                VerticalBox {
+                    spacing: 12px;
+                    Text {
+                        text: "Root Companion Safety Verification:";
+                        font-weight: 700;
+                        color: #ffffff;
+                    }
+                    Text {
+                        text: "• Systemless Mode: 100% tmpfs bind-mount\n• Bootloader Safe: Zero physical partition writes\n• Doze Exemption: Active (dumpsys deviceidle whitelist)\n• 16KB ELF Page Size: Android 15-17 Compliant\n• Stock Keyguard Fallback: Fail-safe PIN always accessible\n• Graceful Revert: OEM AOD settings auto-restored on stop";
+                        font-size: 13px;
+                        color: #90caf9;
+                    }
+                    Text {
+                        text: root.zygisk_status_text;
+                        font-size: 12px;
+                        color: #81c784;
+                    }
+                }
+            }
+        }
+
+        Button {
+            text: "Apply & Sync with Companion Daemon";
+            primary: true;
+            clicked => { root.apply_configuration(); }
+        }
+    }
+}

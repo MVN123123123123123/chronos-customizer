@@ -1,0 +1,19 @@
+[package]
+name = "chronos-zygisk"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+chronos-common = { path = "../chronos-common" }
+log = "0.4"
+thiserror = "1.0"
+jni = "0.21"
+
+[target.'cfg(target_os = "android")'.dependencies]
+ndk = { version = "0.9", default-features = false }
+ndk-sys = "0.6"

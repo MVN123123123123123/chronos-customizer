@@ -1,0 +1,6 @@
+id=chronos-companion
+name=Chronos Companion Suite
+version=v1.0.0
+versionCode=100
+author=Chronos Team
+description=Ultra-low-power Display Preview (AOD), custom lock screen, and multi-layer wallpaper companion module. 100% systemless & safe for temporary root and locked bootloaders.

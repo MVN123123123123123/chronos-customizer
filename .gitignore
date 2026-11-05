@@ -1,0 +1,6 @@
+target/
+dist/
+chronos-module/bin/
+chronos-module/zygisk/
+chronos-module/service.log
+*.log

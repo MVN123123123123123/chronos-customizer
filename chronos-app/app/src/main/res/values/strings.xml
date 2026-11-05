@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Chronos Customizer</string>
+    <string name="wallpaper_name">Chronos Dynamic Canvas</string>
+    <string name="notification_service_name">Chronos Notification Hub</string>
+</resources>

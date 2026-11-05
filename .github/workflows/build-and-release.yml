@@ -1,0 +1,127 @@
+name: Build and Release Chronos
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag name (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-test:
+    name: Build, Test & Package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfontconfig1-dev libxkbcommon-dev zip
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+          components: rustfmt, clippy
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          add-to-path: true
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Check Rust formatting
+        run: cargo fmt --check
+
+      - name: Run Clippy (Host & Android)
+        run: |
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo clippy --workspace --all-targets --target aarch64-linux-android -- -D warnings
+
+      - name: Run Workspace Unit Tests
+        run: cargo test --workspace --verbose
+
+      - name: Build Android ARM64 Release Binaries
+        run: make build-android
+
+      - name: Verify 16KB ELF Page Size Alignment
+        run: make verify-16kb
+
+      - name: Package Companion Module
+        run: make package-module
+
+      - name: Generate Checksums
+        run: |
+          cd dist
+          sha256sum chronos-companion-module.zip > chronos-companion-module.zip.sha256
+          cd ..
+          cp target/aarch64-linux-android/release/customd dist/customd-aarch64
+          cp target/aarch64-linux-android/release/libchronos_zygisk.so dist/libchronos_zygisk-aarch64.so
+          cd dist
+          sha256sum customd-aarch64 > customd-aarch64.sha256
+          sha256sum libchronos_zygisk-aarch64.so > libchronos_zygisk-aarch64.so.sha256
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: chronos-build-artifacts
+          path: dist/*
+          retention-days: 14
+
+      - name: Determine Release Tag
+        id: release_tag
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag_name }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Publish GitHub Release
+        if: steps.release_tag.outputs.tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_tag.outputs.tag }}
+          name: Chronos ${{ steps.release_tag.outputs.tag }}
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease || false }}
+          generate_release_notes: true
+          files: |
+            dist/chronos-companion-module.zip
+            dist/chronos-companion-module.zip.sha256
+            dist/customd-aarch64
+            dist/customd-aarch64.sha256
+            dist/libchronos_zygisk-aarch64.so
+            dist/libchronos_zygisk-aarch64.so.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
