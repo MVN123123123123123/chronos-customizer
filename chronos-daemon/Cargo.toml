@@ -9,6 +9,10 @@ license.workspace = true
 name = "customd"
 path = "src/main.rs"
 
+[[bin]]
+name = "chronos-ctl"
+path = "src/bin/ctl.rs"
+
 [dependencies]
 chronos-common = { path = "../chronos-common" }
 chronos-engine = { path = "../chronos-engine" }
