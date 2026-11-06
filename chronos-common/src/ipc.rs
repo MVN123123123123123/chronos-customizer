@@ -198,9 +198,26 @@ impl IpcServer {
                     stream.set_nonblocking(false)?;
                     stream.set_read_timeout(Some(Duration::from_secs(3)))?;
                     stream.set_write_timeout(Some(Duration::from_secs(3)))?;
-                    let msg = IpcMessage::read_from(&mut stream)?;
-                    let response = handler(msg);
-                    response.write_to(&mut stream)?;
+                    loop {
+                        match IpcMessage::read_from(&mut stream) {
+                            Ok(msg) => {
+                                let response = handler(msg);
+                                if let Err(e) = response.write_to(&mut stream) {
+                                    log::debug!("IPC stream write failed: {}", e);
+                                    break;
+                                }
+                            }
+                            Err(IpcError::Io(ref e))
+                                if e.kind() == std::io::ErrorKind::UnexpectedEof
+                                    || e.kind() == std::io::ErrorKind::TimedOut =>
+                            {
+                                break;
+                            }
+                            Err(_) => {
+                                break;
+                            }
+                        }
+                    }
                     return Ok(());
                 }
                 Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {

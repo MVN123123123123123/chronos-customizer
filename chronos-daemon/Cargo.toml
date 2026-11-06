@@ -13,6 +13,10 @@ path = "src/main.rs"
 name = "chronos-ctl"
 path = "src/bin/ctl.rs"
 
+[[bin]]
+name = "chronos-deep-test"
+path = "src/bin/deep_test.rs"
+
 [dependencies]
 chronos-common = { path = "../chronos-common" }
 chronos-engine = { path = "../chronos-engine" }
